@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { DatePicker, type DateValue, type DatePickerModes, type DateRangeValue } from '@/components/date-picker'
+import { format } from 'date-fns'
 
-const getFormatedDate = (date: DateValue | undefined, placeholder: string) => {
+const formatDateText = (date: DateValue | undefined, placeholder: string) => {
   if (!date) return placeholder
-  if (date instanceof Date) return date.toISOString()
-  return `${date.from?.toISOString()} - ${date.to?.toISOString()}`
+  if (date instanceof Date) return format(date, 'PPP')
+  if (date.from && date.to) return `${format(date.from, 'PPP')} - ${format(date.to, 'PP')}`
+  throw new Error('Invalid date')
 }
 
 function App () {
@@ -28,7 +30,7 @@ function App () {
           <p><strong>Mode:</strong> single</p>
           <p>
             <strong>Date: </strong>
-            {getFormatedDate(singleDate, 'pick a date')}
+            {formatDateText(singleDate, 'pick a date')}
           </p>
         </div>
         <div>
@@ -42,7 +44,7 @@ function App () {
           <p><strong>Mode:</strong> range</p>
           <p>
             <strong>Date: </strong>
-            {getFormatedDate(rangeDate, 'pick a range')}
+            {formatDateText(rangeDate, 'pick a range')}
           </p>
         </div>
         <div>
@@ -55,7 +57,7 @@ function App () {
           <p><strong>Mode:</strong> duo ({mode})</p>
           <p>
             <strong>Date: </strong>
-            {getFormatedDate(duoDate, mode === 'single' ? 'pick a date' : 'pick a range')}
+            {formatDateText(duoDate, mode === 'single' ? 'pick a date' : 'pick a range')}
           </p>
         </div>
       </div>
