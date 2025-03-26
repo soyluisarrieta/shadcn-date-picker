@@ -78,8 +78,6 @@ type DatePickerBase = {
   onModeChange?: (mode: `${Modes}`) => void
 }
 
-type DatePickerProps = DatePickerBase & (DatePickerSingle | DatePickerRange | DatePickerDuo)
-
 function DatePickerTrigger ({
   placeholder,
   className,
@@ -363,6 +361,68 @@ function DatePickerListYears ({
   )
 }
 
+function DatePickerCalendar ({
+  view,
+  currentMonth,
+  handleSelect,
+  isRangeMode,
+  rangeStart,
+  rangeEnd,
+  rangeHover,
+  selectedDate,
+  handleDayHover,
+  handleMonthSelect
+}: {
+  view: 'days' | 'years';
+  currentMonth: Date;
+  handleSelect: (day: Date) => void;
+  isRangeMode: boolean;
+  rangeStart: Date | undefined;
+  rangeEnd: Date | undefined;
+  rangeHover: Date | undefined;
+  selectedDate: Date | undefined;
+  handleDayHover: (day: Date) => void;
+  handleMonthSelect: (year: number, month: number) => void;
+}) {
+  return (
+    <>
+      <div
+        className={cn(
+          'transition-opacity duration-200',
+          view === 'years' ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        )}
+      >
+        <DatePickerWeekDays />
+        <DatePickerGridDays
+          currentMonth={currentMonth}
+          handleSelect={handleSelect}
+          isRangeMode={isRangeMode}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          rangeHover={rangeHover}
+          selectedDate={selectedDate as Date}
+          handleDayHover={handleDayHover}
+        />
+      </div>
+
+      <div
+        className={cn(
+          'absolute inset-0 z-10 transition-opacity duration-200 bg-popover',
+          view === 'years' ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        )}
+      >
+        <DatePickerListYears
+          currentMonth={currentMonth as Date}
+          handleMonthSelect={handleMonthSelect}
+          view={view}
+        />
+      </div>
+    </>
+  )
+}
+
+const dateOrUndefined = (date: DateValue | undefined) => date instanceof Date ? date : undefined
+
 export function DatePicker ({
   className,
   defaultValue,
@@ -372,9 +432,11 @@ export function DatePicker ({
   placeholder,
   mode = 'duo',
   onModeChange
-}: DatePickerProps) {
-  const [selectedDate, setSelectedDate] = React.useState<DateValue | undefined>(defaultValue)
-  const [currentMonth, setCurrentMonth] = React.useState<DateValue>(value || defaultValue || new Date())
+}: DatePickerBase & (
+  DatePickerSingle | DatePickerRange | DatePickerDuo
+)) {
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(dateOrUndefined(defaultValue))
+  const [currentMonth, setCurrentMonth] = React.useState<Date>(dateOrUndefined(value) || dateOrUndefined(defaultValue) || new Date())
   const [isOpen, setIsOpen] = React.useState(false)
   const [view, setView] = React.useState<'days' | 'years'>('days')
   const [isRangeMode, setIsRangeMode] = React.useState(mode === 'range')
@@ -384,6 +446,7 @@ export function DatePicker ({
   const [rangeEnd, setRangeEnd] = React.useState<Date | undefined>(undefined)
   const [rangeHover, setRangeHover] = React.useState<Date | undefined>(undefined)
 
+  // Set range selection states
   React.useEffect(() => {
     if (value && typeof value !== 'object') {
       setRangeStart(value)
@@ -399,13 +462,11 @@ export function DatePicker ({
     let timeoutId: NodeJS.Timeout | null = null
 
     if (!isOpen && view !== 'days') {
-      // Delay the view reset until after the popover closing animation completes
       timeoutId = setTimeout(() => {
         setView('days')
-      }, 200) // This should match or exceed the popover closing animation duration
+      }, 200)
     }
 
-    // Clean up the timeout if the component unmounts or if isOpen changes before timeout completes
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId)
@@ -482,8 +543,22 @@ export function DatePicker ({
       })
     }
 
-    // setIsOpen(false)
     onReset()
+  }
+
+  // Handle switch mode
+  const handleSwitchMode = (checked: boolean) => {
+    setIsRangeMode(checked)
+    if (checked) {
+      (onValueChange as DatePickerRange['onValueChange'])?.(rangeStart && rangeEnd
+        ? { from: rangeStart,to: rangeEnd }
+        : undefined)
+      rangeStart && setCurrentMonth(rangeStart)
+    } else {
+      onValueChange?.(selectedDate as Date)
+      selectedDate && setCurrentMonth(selectedDate)
+    }
+    onModeChange?.(checked ? 'range' : 'single')
   }
 
   return (
@@ -507,64 +582,34 @@ export function DatePicker ({
           />
 
           <div className="relative">
-            <div
-              className={cn(
-                'transition-opacity duration-200',
-                view === 'years' ? 'opacity-0 pointer-events-none' : 'opacity-100'
-              )}
-            >
-              <DatePickerWeekDays />
-              <DatePickerGridDays
-                currentMonth={currentMonth as Date}
-                handleSelect={handleSelect}
-                isRangeMode={isRangeMode}
-                rangeStart={rangeStart}
-                rangeEnd={rangeEnd}
-                rangeHover={rangeHover}
-                selectedDate={selectedDate as Date}
-                handleDayHover={(day: Date) => {
-                  if (isRangeMode && rangeStart && !rangeEnd) {
-                    setRangeHover(day)
-                  }
-                }}
-              />
-            </div>
-
-            <div
-              className={cn(
-                'absolute inset-0 z-10 transition-opacity duration-200 bg-popover',
-                view === 'years' ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              )}
-            >
-              <DatePickerListYears
-                currentMonth={currentMonth as Date}
-                handleMonthSelect={handleMonthSelect}
-                view={view}
-              />
-            </div>
+            <DatePickerCalendar
+              currentMonth={currentMonth as Date}
+              handleMonthSelect={handleMonthSelect}
+              handleSelect={handleSelect}
+              isRangeMode={isRangeMode}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              rangeHover={rangeHover}
+              selectedDate={selectedDate as Date}
+              view={view}
+              handleDayHover={(day: Date) => {
+                if (isRangeMode && rangeStart && !rangeEnd) {
+                  setRangeHover(day)
+                }
+              }}
+            />
 
             {mode === 'duo' && (
               <div className='flex justify-between items-center border-t py-2 text-sm font-medium'>
                 Range mode
                 <Switch
                   checked={isRangeMode}
-                  onCheckedChange={(isChecked) => {
-                    setIsRangeMode(isChecked)
-                    if (isChecked) {
-                      (onValueChange as DatePickerRange['onValueChange'])?.(rangeStart && rangeEnd
-                        ? { from: rangeStart,to: rangeEnd }
-                        : undefined)
-                      rangeStart && setCurrentMonth(rangeStart)
-                    } else {
-                      onValueChange?.(selectedDate as Date)
-                      selectedDate && setCurrentMonth(selectedDate)
-                    }
-                    onModeChange?.(isChecked ? 'range' : 'single')
-                  }}
+                  onCheckedChange={handleSwitchMode}
                 />
               </div>
             )}
           </div>
+
           {onReset && ((!isRangeMode && selectedDate) || (isRangeMode && (rangeStart || rangeEnd))) && (
             <div className='border-t'>
               <Button className="w-full mt-2" variant="secondary" onClick={handleReset}>
