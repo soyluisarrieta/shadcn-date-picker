@@ -24,6 +24,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 
+const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+
 enum Modes {
   Duo = 'duo',
   Single = 'single',
@@ -149,6 +151,141 @@ function DatePickerHeader ({
   )
 }
 
+function DatePickerWeekDays () {
+  return (
+    <div className="grid grid-cols-7 gap-1 text-center text-xs">
+      {dayNames.map((day) => (
+        <div key={day} className="py-1 font-medium">
+          {day}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DatePickerGridDays ({
+  selectedDate,
+  currentMonth,
+  isRangeMode,
+  rangeStart,
+  rangeEnd,
+  rangeHover,
+  handleSelect,
+  handleDayHover
+}: {
+  selectedDate?: Date;
+  currentMonth: Date;
+  isRangeMode?: boolean;
+  rangeStart?: Date;
+  rangeEnd?: Date;
+  rangeHover?: Date;
+  handleSelect: (date: Date) => void;
+  handleDayHover: (date: Date) => void;
+}) {
+  // Get the days of the month
+  const calendarDays = React.useMemo(() => {
+    const daysInMonth = getDaysInMonth(currentMonth ? currentMonth : new Date())
+    const startDay = getDay(startOfMonth(currentMonth ? currentMonth : new Date()))
+    const days = []
+
+    for (let i = 0; i < startDay; i++) {
+      days.push(null)
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const year = currentMonth ? currentMonth.getFullYear() : new Date().getFullYear()
+      const month = currentMonth ? currentMonth.getMonth() : new Date().getMonth()
+      days.push(new Date(year, month, day))
+    }
+
+    return days
+  }, [currentMonth])
+
+  // Check if a date is within the range
+  const isInRange = (day: Date) => {
+    if (!isRangeMode || !day) return false
+
+    if (rangeStart && rangeEnd) {
+      return isWithinInterval(day, {
+        start: startOfDay(rangeStart),
+        end: endOfDay(rangeEnd)
+      })
+    }
+
+    if (rangeStart && rangeHover) {
+      const isHoverAfterStart = isAfter(rangeHover, rangeStart)
+      return isWithinInterval(day, {
+        start: startOfDay(isHoverAfterStart ? rangeStart : rangeHover),
+        end: endOfDay(isHoverAfterStart ? rangeHover : rangeStart)
+      })
+    }
+
+    return false
+  }
+
+  // Check if a date is the start of the range
+  const isRangeStart = (day: Date) => {
+    if (!isRangeMode || !rangeStart || !day) return false
+    return isSameDay(day, rangeStart)
+  }
+
+  // Check if a date is the end of the range
+  const isRangeEnd = (day: Date) => {
+    if (!isRangeMode || !rangeEnd || !day) return false
+    return isSameDay(day, rangeEnd)
+  }
+
+  return (
+    <div className="mt-1 grid grid-cols-7">
+      {calendarDays.map((day, i) => (
+        <div key={i}>
+          {day ? (
+            <Button
+              variant="ghost"
+              title={isToday(day) ? 'Today' : undefined}
+              className={cn(
+                // Base style
+                'h-8 w-8 p-0 font-normal relative',
+
+                // Today style
+                isToday(day) &&
+                  'bg-accent hover:bg-secondary text-accent-foreground rounded-full',
+
+                // Selected style
+                !isRangeMode && selectedDate && isSameDay(day, selectedDate ? selectedDate : new Date()) &&
+                  'bg-primary text-primary-foreground hover:bg-primary dark:hover:bg-primary hover:text-primary-foreground',
+
+                // Range style
+                isRangeMode && isInRange(day) &&
+                  'bg-primary/10 dark:bg-primary/20 rounded-none',
+
+                // Range start style
+                isRangeMode && isRangeStart(day) &&
+                  'bg-primary dark:bg-primary hover:bg-primary dark:hover:bg-primary text-primary-foreground hover:text-primary-foreground dark:hover:text-primary-foreground rounded-l-md rounded-r-none',
+
+                // Range end style
+                isRangeMode && isRangeEnd(day) &&
+                  'bg-primary dark:bg-primary hover:bg-primary dark:hover:bg-primary text-primary-foreground hover:text-primary-foreground dark:hover:text-primary-foreground rounded-r-md rounded-l-none',
+
+                // Range start and end style
+                isRangeMode && isRangeStart(day) && isRangeEnd(day) &&
+                  'rounded-md'
+              )}
+              onClick={() => handleSelect(day)}
+              onMouseEnter={() => handleDayHover(day)}
+            >
+              {day.getDate()}
+              {isToday(day) && <span className='size-1 bg-primary absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full' />}
+            </Button>
+          ) : (
+            <div className="h-8 w-8" />
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function DatePicker ({
   className,
   defaultValue,
@@ -251,13 +388,6 @@ export function DatePicker ({
     }
   }
 
-  // Handle mouse hover for range selection
-  const handleDayHover = (day: Date) => {
-    if (isRangeMode && rangeStart && !rangeEnd) {
-      setRangeHover(day)
-    }
-  }
-
   // Navigate to previous month
   const previousMonth = () => {
     setCurrentMonth(subMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1))
@@ -295,63 +425,6 @@ export function DatePicker ({
     { name: 'Nov', full: 'November' },
     { name: 'Dec', full: 'December' }
   ]
-
-  // Generate calendar days
-  const calendarDays = React.useMemo(() => {
-    const daysInMonth = getDaysInMonth(currentMonth instanceof Date ? currentMonth : new Date())
-    const startDay = getDay(startOfMonth(currentMonth instanceof Date ? currentMonth : new Date()))
-    const days = []
-
-    // Add empty cells for days before the start of the month
-    for (let i = 0; i < startDay; i++) {
-      days.push(null)
-    }
-
-    // Add days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(currentMonth instanceof Date ? currentMonth.getFullYear() : new Date().getFullYear(), currentMonth instanceof Date ? currentMonth.getMonth() : new Date().getMonth(), day)
-      days.push(date)
-    }
-
-    return days
-  }, [currentMonth])
-
-  // Day names
-  const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-
-  // Check if a date is within the selected range
-  const isInRange = (day: Date) => {
-    if (!isRangeMode || !day) return false
-
-    if (rangeStart && rangeEnd) {
-      return isWithinInterval(day, {
-        start: startOfDay(rangeStart),
-        end: endOfDay(rangeEnd)
-      })
-    }
-
-    if (rangeStart && rangeHover) {
-      const isHoverAfterStart = isAfter(rangeHover, rangeStart)
-      return isWithinInterval(day, {
-        start: startOfDay(isHoverAfterStart ? rangeStart : rangeHover),
-        end: endOfDay(isHoverAfterStart ? rangeHover : rangeStart)
-      })
-    }
-
-    return false
-  }
-
-  // Check if a date is the start of the range
-  const isRangeStart = (day: Date) => {
-    if (!isRangeMode || !rangeStart || !day) return false
-    return isSameDay(day, rangeStart)
-  }
-
-  // Check if a date is the end of the range
-  const isRangeEnd = (day: Date) => {
-    if (!isRangeMode || !rangeEnd || !day) return false
-    return isSameDay(day, rangeEnd)
-  }
 
   // Handle reset
   const handleReset = () => {
@@ -401,48 +474,21 @@ export function DatePicker ({
                 view === 'years' ? 'opacity-0 pointer-events-none' : 'opacity-100'
               )}
             >
-              <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                {dayNames.map((day) => (
-                  <div key={day} className="py-1 font-medium">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-1 grid grid-cols-7">
-                {calendarDays.map((day, i) => (
-                  <div key={i}>
-                    {day ? (
-                      <Button
-                        variant="ghost"
-                        title={isToday(day) ? 'Today' : undefined}
-                        className={cn(
-                          'h-8 w-8 p-0 font-normal relative',
-                          isToday(day) && 'bg-accent hover:bg-secondary text-accent-foreground rounded-full',
-                          !isRangeMode &&
-                            selectedDate &&
-                            isSameDay(day, selectedDate instanceof Date ? selectedDate : new Date()) &&
-                            'bg-primary text-primary-foreground hover:bg-primary dark:hover:bg-primary hover:text-primary-foreground',
-                          isRangeMode && isInRange(day) && 'bg-primary/10 dark:bg-primary/20 rounded-none',
-                          isRangeMode &&
-                            isRangeStart(day) &&
-                            'bg-primary dark:bg-primary hover:bg-primary dark:hover:bg-primary text-primary-foreground hover:text-primary-foreground dark:hover:text-primary-foreground rounded-l-md rounded-r-none',
-                          isRangeMode &&
-                            isRangeEnd(day) &&
-                            'bg-primary dark:bg-primary hover:bg-primary dark:hover:bg-primary text-primary-foreground hover:text-primary-foreground dark:hover:text-primary-foreground rounded-r-md rounded-l-none',
-                          isRangeMode && isRangeStart(day) && isRangeEnd(day) && 'rounded-md'
-                        )}
-                        onClick={() => handleSelect(day)}
-                        onMouseEnter={() => handleDayHover(day)}
-                      >
-                        {day.getDate()}
-                        {isToday(day) && <span className='size-1 bg-primary absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full' />}
-                      </Button>
-                    ) : (
-                      <div className="h-8 w-8" />
-                    )}
-                  </div>
-                ))}
-              </div>
+              <DatePickerWeekDays />
+              <DatePickerGridDays
+                currentMonth={currentMonth as Date}
+                handleSelect={handleSelect}
+                isRangeMode={isRangeMode}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                rangeHover={rangeHover}
+                selectedDate={selectedDate as Date}
+                handleDayHover={(day: Date) => {
+                  if (isRangeMode && rangeStart && !rangeEnd) {
+                    setRangeHover(day)
+                  }
+                }}
+              />
             </div>
 
             <div
