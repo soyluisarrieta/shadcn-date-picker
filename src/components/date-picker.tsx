@@ -24,7 +24,21 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 
-const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const MONTHS = [
+  { name: 'Jan', full: 'January' },
+  { name: 'Feb', full: 'February' },
+  { name: 'Mar', full: 'March' },
+  { name: 'Apr', full: 'April' },
+  { name: 'May', full: 'May' },
+  { name: 'Jun', full: 'June' },
+  { name: 'Jul', full: 'July' },
+  { name: 'Aug', full: 'August' },
+  { name: 'Sep', full: 'September' },
+  { name: 'Oct', full: 'October' },
+  { name: 'Nov', full: 'November' },
+  { name: 'Dec', full: 'December' }
+]
 
 enum Modes {
   Duo = 'duo',
@@ -154,7 +168,7 @@ function DatePickerHeader ({
 function DatePickerWeekDays () {
   return (
     <div className="grid grid-cols-7 gap-1 text-center text-xs">
-      {dayNames.map((day) => (
+      {DAY_NAMES.map((day) => (
         <div key={day} className="py-1 font-medium">
           {day}
         </div>
@@ -286,6 +300,69 @@ function DatePickerGridDays ({
   )
 }
 
+function DatePickerListYears ({
+  currentMonth,
+  view,
+  handleMonthSelect
+}: {
+  currentMonth: Date | null;
+  view: 'days' | 'years';
+  handleMonthSelect: (year: number, month: number) => void
+}) {
+  const currentYearRef = React.useRef<HTMLDivElement>(null)
+
+  const currentYear = currentMonth ? currentMonth.getFullYear() : new Date().getFullYear()
+  const currentYearValue = `year-${currentYear}`
+  const currentMonthIndex = currentMonth ? currentMonth.getMonth() : new Date().getMonth()
+
+  // Scroll to current year when years view is opened
+  React.useEffect(() => {
+    if (view === 'years' && currentYearRef.current) {
+      setTimeout(() => {
+        currentYearRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' })
+      }, 100)
+    }
+  }, [view])
+
+  // Generate years from 1950 to 2050
+  const years = React.useMemo(() => {
+    return Array.from({ length: 2050 - 1950 + 1 }, (_, i) => 1950 + i)
+  }, [])
+
+  return (
+    <ScrollArea className="h-full pl-2 pr-4">
+      <Accordion type="single" collapsible defaultValue={currentYearValue} className="w-full">
+        {years.map((year) => (
+          <div key={year} ref={year === currentYear ? currentYearRef : undefined}>
+            <AccordionItem value={`year-${year}`}>
+              <AccordionTrigger className="text-sm py-2 [&>svg]:last:hidden hover:no-underline border-t rounded-none text-foreground/70 hover:text-foreground">
+                <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0 translate-y-0.5 transition-transform duration-200" />
+                <span className="flex-1">{year}</span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-4 gap-2">
+                  {MONTHS.map((month, index) => (
+                    <Button
+                      key={month.name}
+                      variant={index === currentMonthIndex && year === currentYear ? 'default' : 'outline'}
+                      size="sm"
+                      className="text-sm"
+                      title={month.full}
+                      onClick={() => handleMonthSelect(year, index)}
+                    >
+                      {month.name}
+                    </Button>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </div>
+        ))}
+      </Accordion>
+    </ScrollArea>
+  )
+}
+
 export function DatePicker ({
   className,
   defaultValue,
@@ -306,14 +383,6 @@ export function DatePicker ({
   const [rangeStart, setRangeStart] = React.useState<Date | undefined>(undefined)
   const [rangeEnd, setRangeEnd] = React.useState<Date | undefined>(undefined)
   const [rangeHover, setRangeHover] = React.useState<Date | undefined>(undefined)
-
-  // Get the current year for the accordion default value
-  const currentYear = currentMonth instanceof Date ? currentMonth.getFullYear() : new Date().getFullYear()
-  const currentYearValue = `year-${currentYear}`
-  const currentMonthIndex = currentMonth instanceof Date ? currentMonth.getMonth() : new Date().getMonth()
-
-  // Reference to the current year's accordion item
-  const currentYearRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     if (value && typeof value !== 'object') {
@@ -343,15 +412,6 @@ export function DatePicker ({
       }
     }
   }, [isOpen, view])
-
-  // Scroll to current year when years view is opened
-  React.useEffect(() => {
-    if (view === 'years' && currentYearRef.current) {
-      setTimeout(() => {
-        currentYearRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' })
-      }, 100)
-    }
-  }, [view])
 
   // Handle date selection
   const handleSelect = (day: Date) => {
@@ -404,27 +464,6 @@ export function DatePicker ({
     setCurrentMonth(newDate)
     setView('days')
   }
-
-  // Generate years from 1950 to 2050
-  const years = React.useMemo(() => {
-    return Array.from({ length: 2050 - 1950 + 1 }, (_, i) => 1950 + i)
-  }, [])
-
-  // Generate months with short names
-  const months = [
-    { name: 'Jan', full: 'January' },
-    { name: 'Feb', full: 'February' },
-    { name: 'Mar', full: 'March' },
-    { name: 'Apr', full: 'April' },
-    { name: 'May', full: 'May' },
-    { name: 'Jun', full: 'June' },
-    { name: 'Jul', full: 'July' },
-    { name: 'Aug', full: 'August' },
-    { name: 'Sep', full: 'September' },
-    { name: 'Oct', full: 'October' },
-    { name: 'Nov', full: 'November' },
-    { name: 'Dec', full: 'December' }
-  ]
 
   // Handle reset
   const handleReset = () => {
@@ -497,36 +536,11 @@ export function DatePicker ({
                 view === 'years' ? 'opacity-100' : 'opacity-0 pointer-events-none'
               )}
             >
-              <ScrollArea className="h-full pl-2 pr-4">
-                <Accordion type="single" collapsible defaultValue={currentYearValue} className="w-full">
-                  {years.map((year) => (
-                    <div key={year} ref={year === currentYear ? currentYearRef : undefined}>
-                      <AccordionItem value={`year-${year}`}>
-                        <AccordionTrigger className="text-sm py-2 [&>svg]:last:hidden hover:no-underline border-t rounded-none text-foreground/70 hover:text-foreground">
-                          <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0 translate-y-0.5 transition-transform duration-200" />
-                          <span className="flex-1">{year}</span>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="grid grid-cols-4 gap-2">
-                            {months.map((month, index) => (
-                              <Button
-                                key={month.name}
-                                variant={index === currentMonthIndex && year === currentYear ? 'default' : 'outline'}
-                                size="sm"
-                                className="text-sm"
-                                title={month.full}
-                                onClick={() => handleMonthSelect(year, index)}
-                              >
-                                {month.name}
-                              </Button>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </div>
-                  ))}
-                </Accordion>
-              </ScrollArea>
+              <DatePickerListYears
+                currentMonth={currentMonth as Date}
+                handleMonthSelect={handleMonthSelect}
+                view={view}
+              />
             </div>
 
             {mode === 'duo' && (
