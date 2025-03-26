@@ -64,6 +64,53 @@ type DatePickerBase = {
 
 type DatePickerProps = DatePickerBase & (DatePickerSingle | DatePickerRange | DatePickerDuo)
 
+function DatePickerTrigger ({
+  placeholder,
+  className,
+  selectedDate,
+  rangeStart,
+  rangeEnd,
+  isRangeMode
+}: {
+  placeholder?: string,
+  className?: string
+  selectedDate?: Date,
+  rangeStart?: Date,
+  rangeEnd?: Date,
+  isRangeMode?: boolean
+}) {
+  const formatDisplayText = () => {
+    const placeholderText = placeholder ? placeholder : `Pick a ${isRangeMode ? 'date range' : 'date'}`
+    if (!isRangeMode) {
+      return selectedDate ? format(selectedDate ? selectedDate : new Date(), 'PPP') : placeholderText
+    } else if (isRangeMode) {
+      if (rangeStart && rangeEnd) {
+        return `${format(rangeStart, 'PP')} - ${format(rangeEnd, 'PP')}`
+      } else if (rangeStart) {
+        return `${format(rangeStart, 'PP')} - ?`
+      } else {
+        return placeholderText
+      }
+    }
+  }
+  return (
+    <Button
+      variant="outline"
+      className={cn(
+        'w-auto min-w-[180px] justify-start text-left font-normal',
+        (!isRangeMode && !selectedDate) || (isRangeMode && !rangeStart) ? 'text-muted-foreground' : '',
+        className
+      )}
+      asChild
+    >
+      <PopoverTrigger>
+        <span className="flex-1">{formatDisplayText()}</span>
+        <CalendarIcon className="ml-2 h-4 w-4 text-muted-foreground" />
+      </PopoverTrigger>
+    </Button>
+  )
+}
+
 export function DatePicker ({
   className,
   defaultValue,
@@ -273,22 +320,6 @@ export function DatePicker ({
     return isSameDay(day, rangeEnd)
   }
 
-  // Format the display text for the date picker button
-  const formatDisplayText = () => {
-    const placeholderText = placeholder ? placeholder : `Pick a ${isRangeMode ? 'date range' : 'date'}`
-    if (!isRangeMode) {
-      return selectedDate ? format(selectedDate instanceof Date ? selectedDate : new Date(), 'PPP') : placeholderText
-    } else if (isRangeMode) {
-      if (rangeStart && rangeEnd) {
-        return `${format(rangeStart, 'PP')} - ${format(rangeEnd, 'PP')}`
-      } else if (rangeStart) {
-        return `${format(rangeStart, 'PP')} - ?`
-      } else {
-        return placeholderText
-      }
-    }
-  }
-
   // Handle reset
   const handleReset = () => {
     if (!onReset) return
@@ -312,20 +343,14 @@ export function DatePicker ({
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <Button
-        variant="outline"
-        className={cn(
-          'w-auto min-w-[180px] justify-start text-left font-normal',
-          (!isRangeMode && !selectedDate) || (isRangeMode && !rangeStart) ? 'text-muted-foreground' : '',
-          className
-        )}
-        asChild
-      >
-        <PopoverTrigger>
-          <span className="flex-1">{formatDisplayText()}</span>
-          <CalendarIcon className="ml-2 h-4 w-4 text-muted-foreground" />
-        </PopoverTrigger>
-      </Button>
+      <DatePickerTrigger
+        className={className}
+        placeholder={placeholder}
+        selectedDate={selectedDate as Date}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        isRangeMode={isRangeMode}
+      />
       <PopoverContent className="w-auto p-0" align="start">
         <div className="p-3">
           <div className="flex items-center justify-between pb-1">
