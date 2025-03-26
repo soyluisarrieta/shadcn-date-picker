@@ -25,6 +25,7 @@ function App () {
             className='mb-4'
             mode="single"
             onValueChange={setSingleDate}
+            defaultValue={new Date('2025-03-05T05:00:00.000Z')}
             value={singleDate}
           />
           <p><strong>Mode:</strong> single</p>
@@ -39,6 +40,10 @@ function App () {
             className='mb-4'
             mode="range"
             onValueChange={setRangeDate}
+            defaultValue={{
+              from: new Date('2025-03-05T05:00:00.000Z'),
+              to: new Date('2025-03-15T05:00:00.000Z')
+            }}
             value={rangeDate}
           />
           <p><strong>Mode:</strong> range</p>
@@ -53,6 +58,7 @@ function App () {
             className='mb-4'
             onModeChange={setMode}
             onValueChange={setDuoDate}
+            defaultValue={new Date('2025-03-15T05:00:00.000Z')}
           />
           <p><strong>Mode:</strong> duo ({mode})</p>
           <p>

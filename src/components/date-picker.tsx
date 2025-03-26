@@ -442,10 +442,9 @@ export function DatePicker ({
   const [isRangeMode, setIsRangeMode] = React.useState(mode === 'range')
 
   // Range selection states
-  const [rangeStart, setRangeStart] = React.useState<Date | undefined>(undefined)
-  const [rangeEnd, setRangeEnd] = React.useState<Date | undefined>(undefined)
+  const [rangeStart, setRangeStart] = React.useState<Date | undefined>(dateOrUndefined((defaultValue as DateRangeValue)?.from))
+  const [rangeEnd, setRangeEnd] = React.useState<Date | undefined>(dateOrUndefined((defaultValue as DateRangeValue)?.to))
   const [rangeHover, setRangeHover] = React.useState<Date | undefined>(undefined)
-
   // Set range selection states
   React.useEffect(() => {
     if (value && typeof value !== 'object') {
