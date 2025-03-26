@@ -111,6 +111,44 @@ function DatePickerTrigger ({
   )
 }
 
+function DatePickerHeader ({
+  currentMonth,
+  view,
+  setView,
+  previousMonth,
+  nextMonth
+}: {
+  currentMonth: Date;
+  view: 'days' | 'years';
+  setView: (view: 'days' | 'years') => void;
+  previousMonth: () => void;
+  nextMonth: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between pb-1">
+      <Button
+        variant="ghost"
+        className="text-sm font-medium flex items-center data-[state=open]:text-muted-foreground/80 [&[data-state=open]>svg]:rotate-180"
+        onClick={() => setView(view === 'days' ? 'years' : 'days')}
+        data-state={view === 'years' ? 'open' : 'closed'}
+      >
+        {format(currentMonth ? currentMonth : new Date(), 'MMMM yyyy')}
+        <ChevronDown className="ml-1 h-4 w-4 transition-transform duration-200" />
+      </Button>
+      <div className="flex items-center">
+        <Button variant="ghost" className="h-8 w-8 p-0" onClick={previousMonth}>
+          <ChevronLeft className="h-4 w-4" />
+          <span className="sr-only">Previous month</span>
+        </Button>
+        <Button variant="ghost" className="h-8 w-8 p-0" onClick={nextMonth}>
+          <ChevronRight className="h-4 w-4" />
+          <span className="sr-only">Next month</span>
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function DatePicker ({
   className,
   defaultValue,
@@ -228,11 +266,6 @@ export function DatePicker ({
   // Navigate to next month
   const nextMonth = () => {
     setCurrentMonth(addMonths(currentMonth instanceof Date ? currentMonth : new Date(), 1))
-  }
-
-  // Toggle between days and years view
-  const toggleView = () => {
-    setView(view === 'days' ? 'years' : 'days')
   }
 
   // Handle month selection
@@ -353,27 +386,13 @@ export function DatePicker ({
       />
       <PopoverContent className="w-auto p-0" align="start">
         <div className="p-3">
-          <div className="flex items-center justify-between pb-1">
-            <Button
-              variant="ghost"
-              className="text-sm font-medium flex items-center data-[state=open]:text-muted-foreground/80 [&[data-state=open]>svg]:rotate-180"
-              onClick={toggleView}
-              data-state={view === 'years' ? 'open' : 'closed'}
-            >
-              {format(currentMonth instanceof Date ? currentMonth : new Date(), 'MMMM yyyy')}
-              <ChevronDown className="ml-1 h-4 w-4 transition-transform duration-200" />
-            </Button>
-            <div className="flex items-center">
-              <Button variant="ghost" className="h-8 w-8 p-0" onClick={previousMonth}>
-                <ChevronLeft className="h-4 w-4" />
-                <span className="sr-only">Previous month</span>
-              </Button>
-              <Button variant="ghost" className="h-8 w-8 p-0" onClick={nextMonth}>
-                <ChevronRight className="h-4 w-4" />
-                <span className="sr-only">Next month</span>
-              </Button>
-            </div>
-          </div>
+          <DatePickerHeader
+            currentMonth={currentMonth as Date}
+            view={view}
+            setView={setView}
+            previousMonth={previousMonth}
+            nextMonth={nextMonth}
+          />
 
           <div className="relative">
             <div
@@ -463,6 +482,7 @@ export function DatePicker ({
                 </Accordion>
               </ScrollArea>
             </div>
+
             {mode === 'duo' && (
               <div className='flex justify-between items-center border-t py-2 text-sm font-medium'>
                 Range mode
