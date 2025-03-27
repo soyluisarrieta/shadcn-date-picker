@@ -75,7 +75,8 @@ type DatePickerBase = {
   className?: string
   onReset?: () => void
   placeholder?: string
-  onModeChange?: (mode: `${Modes}`) => void
+  onModeChange?: (mode: `${Modes}`) => void,
+  align?: 'start' | 'center' | 'end';
 }
 
 function DatePickerTrigger ({
@@ -431,7 +432,8 @@ export function DatePicker ({
   onReset,
   placeholder,
   mode = 'duo',
-  onModeChange
+  onModeChange,
+  align = 'end'
 }: DatePickerBase & (
   DatePickerSingle | DatePickerRange | DatePickerDuo
 )) {
@@ -570,7 +572,7 @@ export function DatePicker ({
         rangeEnd={rangeEnd}
         isRangeMode={isRangeMode}
       />
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0" align={align}>
         <div className="p-3">
           <DatePickerHeader
             currentMonth={currentMonth as Date}
